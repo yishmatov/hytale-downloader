@@ -1,0 +1,34 @@
+name: Hytale Downloader Workflow
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-downloader:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Download Archive
+        run: wget -O hytale-downloader.zip https://downloader.hytale.com/hytale-downloader.zip
+
+      - name: Extract Archive
+        run: unzip hytale-downloader.zip
+
+      - name: Execute Downloader
+        id: execute
+        # Sets a timeout to prevent the job from hanging indefinitely if the tool waits for 
+        # interactive input (e.g., OAuth authentication).
+        timeout-minutes: 10
+        # continue-on-error allows the upload step to run even if the downloader returns a 
+        # non-zero exit code (common if authentication is missing).
+        continue-on-error: true
+        run: |
+          chmod +x hytale-downloader-linux-amd64
+          ./hytale-downloader-linux-amd64
+
+      - name: Upload All Files
+        uses: actions/upload-artifact@v4
+        with:
+          name: download
+          path: .
+          include-hidden-files: true
