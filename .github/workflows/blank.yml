@@ -1,10 +1,14 @@
-name: Hytale Downloader Workflow
+name: Hytale Downloader & Release
 
 on:
   workflow_dispatch:
 
+# REQUIRED: Give the token permission to create releases
+permissions:
+  contents: write
+
 jobs:
-  run-downloader:
+  run-and-release:
     runs-on: ubuntu-latest
     
     steps:
@@ -16,19 +20,25 @@ jobs:
 
       - name: Execute Downloader
         id: execute
-        # Sets a timeout to prevent the job from hanging indefinitely if the tool waits for 
-        # interactive input (e.g., OAuth authentication).
         timeout-minutes: 10
-        # continue-on-error allows the upload step to run even if the downloader returns a 
-        # non-zero exit code (common if authentication is missing).
         continue-on-error: true
         run: |
           chmod +x hytale-downloader-linux-amd64
           ./hytale-downloader-linux-amd64
 
-      - name: Upload All Files
-        uses: actions/upload-artifact@v4
+      # New Step: Zip everything into one file for the Release
+      - name: Zip Output
+        run: zip -r hytale-full-download.zip . -x ".git/*" ".github/*"
+
+      # New Step: Create Release and Upload
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: download
-          path: .
-          include-hidden-files: true
+          # Creates a unique tag per run (e.g., build-5)
+          tag_name: build-${{ github.run_number }}
+          name: "Hytale Download: Build ${{ github.run_number }}"
+          files: hytale-full-download.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
